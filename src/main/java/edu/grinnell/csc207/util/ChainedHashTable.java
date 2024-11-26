@@ -189,11 +189,16 @@ public class ChainedHashTable<K, V> implements HashTable<K, V> {
       } // if reporter != null
       throw new IndexOutOfBoundsException("Invalid key: " + key);
     } else {
-      Pair<K, V> pair = alist.get(0);
-      if (REPORT_BASIC_CALLS && (reporter != null)) {
-        reporter.report("get(" + key + ") => " + pair.value());
-      } // if reporter != null
-      return pair.value();
+      for( Pair<K,V> pair : alist ) {
+        if (pair.key().equals(key)){
+          if (REPORT_BASIC_CALLS && (reporter != null)) {
+            reporter.report("get(" + key + ") => " + pair.value());
+          } // if reporter != null
+          return pair.value();
+        }
+
+      }
+      return null;
     } // get
   } // get(K)
 
@@ -247,9 +252,18 @@ public class ChainedHashTable<K, V> implements HashTable<K, V> {
     if (alist == null) {
       alist = new ArrayList<Pair<K, V>>();
       this.buckets[index] = alist;
-    } // if
-    alist.add(new Pair<K, V>(key, value));
-    ++this.size;
+      alist.add(new Pair<K, V>(key, value));
+      ++this.size;
+    } else {
+      for(Pair<K,V> pair : alist) { 
+        if(pair.key().equals(key)) { 
+          pair.value = value;
+        }
+      }
+    }
+
+
+
 
     // Report activity, if appropriate
     if (REPORT_BASIC_CALLS && (reporter != null)) {
