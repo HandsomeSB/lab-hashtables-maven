@@ -79,6 +79,8 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
    */
   static final int PROBE_OFFSET = 17;
 
+  final Pair<K,V> FAKE_NULL = new Pair<K,V>(null, null);
+
   // +--------+----------------------------------------------------------
   // | Fields |
   // +--------+
@@ -170,7 +172,7 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
     } // for
   } // forEach(BiConsumer)
 
-  /**
+  /**ether the key is already used a potential bug? What effect might that failure to check have on the behavior of the program?
    * Get the value for a particular key.
    *
    * @param key
@@ -186,7 +188,7 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
     int index = find(key);
     @SuppressWarnings("unchecked")
     Pair<K, V> pair = (Pair<K, V>) pairs[index];
-    if (pair == null) {
+    if (pair == null || !pair.key().equals(key)) {
       if (REPORT_BASIC_CALLS && (reporter != null)) {
         reporter.report("get(" + key + ") failed");
       } // if reporter != null
@@ -220,8 +222,16 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
    */
   @Override
   public V remove(K key) {
-    // STUB
-    return null;
+    int index = find(key);
+    @SuppressWarnings("unchecked")
+    Pair<K, V> pair = (Pair<K, V>) this.pairs[index];
+    if (pair == null) {
+      return null;
+    }
+    V val = pair.value();
+    this.pairs[index] = FAKE_NULL;
+    --this.size;
+    return val;
   } // remove(K)
 
   /**
@@ -245,14 +255,16 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
     int index = find(key);
     if (this.pairs[index] != null) {
       result = ((Pair<K, V>) this.pairs[index]).value();
-    } // if
+    } else {
+      ++this.size;
+    }
     this.pairs[index] = new Pair<K, V>(key, value);
     // Report activity, if appropriate
     if (REPORT_BASIC_CALLS && (reporter != null)) {
       reporter.report("pairs[" + index + "] = " + key + ":" + value);
     } // if reporter != null
     // Note that we've incremented the size.
-    ++this.size;
+
     // And we're done
     return result;
   } // set(K, V)
@@ -368,7 +380,18 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
     Object[] newPairs = new Object[newSize];
     // Move all pairs from the old table to their appropriate
     // location in the new table.
-    // STUB
+    int newCapacity = this.pairs.length * 2 + rand.nextInt(20);
+    if(newCapacity % 2 == 0) { 
+      newCapacity++;
+    }
+    // Create a new table of that capacity
+    newPairs= new Object[newCapacity];
+    // Move all the values from the old table to their appropriate 
+    // location in the new table.
+    for (int i = 0; i < this.pairs.length; i++) {
+      newPairs[i] = this.pairs[i];
+    } // for
+    this.pairs = newPairs;
     // And update our pairs
   } // expand()
 
@@ -381,8 +404,18 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
    *
    * @return the aforementioned index.
    */
+  @SuppressWarnings("unchecked")
   int find(K key) {
-    return Math.abs(key.hashCode()) % this.pairs.length;
+    int index = Math.abs(key.hashCode()) % this.pairs.length;
+    int count = 1;
+    while (this.pairs[index] != null && this.pairs[index] != FAKE_NULL && !((Pair<K, V>) (this.pairs[index])).key().equals(key)){
+      int probOffeset = count * count;
+      index += probOffeset;
+      index = Math.abs(index);
+      index %= this.pairs.length;
+      count++;
+    }
+    return index;
   } // find(K)
 
 } // class ProbedHashTable<K, V>
