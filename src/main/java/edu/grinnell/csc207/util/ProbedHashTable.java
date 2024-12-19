@@ -370,9 +370,14 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
   /**
    * Expand the size of the table.
    */
+  @SuppressWarnings("unchecked")
   void expand() {
     // Figure out the size of the new table.
     int newSize = 2 * this.pairs.length + rand.nextInt(10);
+    if(newSize % 2 == 0) { 
+      newSize++;
+    }
+
     if (REPORT_BASIC_CALLS && (reporter != null)) {
       reporter.report("Expanding to " + newSize + " elements.");
     } // if reporter != null
@@ -380,19 +385,18 @@ public class ProbedHashTable<K, V> implements HashTable<K, V> {
     Object[] newPairs = new Object[newSize];
     // Move all pairs from the old table to their appropriate
     // location in the new table.
-    int newCapacity = this.pairs.length * 2 + rand.nextInt(20);
-    if(newCapacity % 2 == 0) { 
-      newCapacity++;
-    }
-    // Create a new table of that capacity
-    newPairs= new Object[newCapacity];
-    // Move all the values from the old table to their appropriate 
-    // location in the new table.
-    for (int i = 0; i < this.pairs.length; i++) {
-      newPairs[i] = this.pairs[i];
-    } // for
-    this.pairs = newPairs;
     // And update our pairs
+
+    Object[] temp = this.pairs;
+    this.pairs = newPairs;
+
+    for(int i = 0; i < temp.length; ++i) { 
+      Pair<K, V> tempPair = (Pair<K, V>) temp[i];
+      if(tempPair != null) { 
+        this.set(tempPair.key(), tempPair.value());
+      }
+    }
+
   } // expand()
 
   /**
